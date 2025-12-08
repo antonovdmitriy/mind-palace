@@ -65,6 +65,18 @@ struct FolderSelectionView: View {
                     }
                 }
 
+                ToolbarItem(placement: .principal) {
+                    if !folderStructure.isEmpty {
+                        Button {
+                            loadFolderStructure()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.body)
+                        }
+                        .disabled(isLoading)
+                    }
+                }
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         savePaths()
@@ -98,81 +110,114 @@ struct FolderSelectionView: View {
         isLoading = true
         errorMessage = nil
 
-        Task {
-            do {
-                let service = GitHubService(
-                    token: repository.accessToken ?? settings.first?.githubToken
-                )
+        print("📁 FolderSelection: Loading folder structure for \(repository.fullName)")
 
-                // Get all markdown files
-                let files = try await service.listMarkdownFiles(
-                    owner: repository.owner,
-                    repo: repository.name
-                )
+        // Use already synced files instead of fetching from API
+        let syncedFiles = repository.files
 
-                // Build folder tree
-                let nodes = buildFolderTree(from: files)
-
-                await MainActor.run {
-                    self.folderStructure = nodes
-                    self.isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = "Failed to load folders: \(error.localizedDescription)"
-                    self.isLoading = false
-                }
-            }
+        if syncedFiles.isEmpty {
+            print("⚠️ FolderSelection: No synced files yet. Please sync the repository first.")
+            errorMessage = "No files synced yet. Please sync this repository first."
+            isLoading = false
+            return
         }
+
+        print("📁 FolderSelection: Using \(syncedFiles.count) synced files")
+
+        // Build folder tree from synced files
+        let filePaths = syncedFiles.map { GitHubContent(
+            name: $0.fileName,
+            path: $0.path,
+            sha: $0.sha ?? "",
+            size: 0,
+            url: "",
+            htmlUrl: "",
+            gitUrl: "",
+            downloadUrl: nil,
+            type: .file
+        )}
+
+        let nodes = buildFolderTree(from: filePaths)
+
+        print("📁 FolderSelection: Built \(nodes.count) root folders")
+
+        folderStructure = nodes
+        isLoading = false
+        print("📁 FolderSelection: UI updated")
     }
 
     private func buildFolderTree(from files: [GitHubContent]) -> [FolderNode] {
-        var root: [String: FolderNode] = [:]
+        print("📁 Building folder tree from \(files.count) files")
+
+        // Collect all unique folder paths
+        var folderPaths = Set<String>()
+        var folderFileCounts: [String: Int] = [:]
 
         for file in files {
             let components = file.path.components(separatedBy: "/")
-            guard components.count > 1 else { continue } // Skip root files
 
-            var currentLevel = root
+            // Build all parent folder paths
             var currentPath = ""
-
-            for (index, component) in components.dropLast().enumerated() {
+            for component in components.dropLast() {
                 currentPath += (currentPath.isEmpty ? "" : "/") + component
-
-                if currentLevel[component] == nil {
-                    let isSelected = repository.shouldIncludePath(currentPath)
-                    currentLevel[component] = FolderNode(
-                        name: component,
-                        path: currentPath,
-                        isSelected: isSelected,
-                        fileCount: 0
-                    )
-                }
-
-                if index < components.count - 2 {
-                    var node = currentLevel[component]!
-                    currentLevel = extractChildren(&node)
-                    currentLevel[component] = node
-                }
+                folderPaths.insert(currentPath)
             }
 
-            // Increment file count
-            let parentFolder = components.dropLast().last ?? ""
-            if var node = currentLevel[parentFolder] {
-                node.fileCount += 1
-                currentLevel[parentFolder] = node
+            // Count files in the immediate parent folder
+            if components.count > 1 {
+                let parentPath = components.dropLast().joined(separator: "/")
+                folderFileCounts[parentPath, default: 0] += 1
             }
         }
 
-        return Array(root.values).sorted { $0.name < $1.name }
-    }
+        print("📁 Found \(folderPaths.count) unique folders")
 
-    private func extractChildren(_ node: inout FolderNode) -> [String: FolderNode] {
-        var children: [String: FolderNode] = [:]
-        for child in node.children {
-            children[child.name] = child
+        // Build nodes for all folders
+        var allNodes: [String: FolderNode] = [:]
+        for path in folderPaths {
+            let components = path.components(separatedBy: "/")
+            let name = components.last ?? path
+            let isSelected = repository.shouldIncludePath(path)
+            let fileCount = folderFileCounts[path] ?? 0
+
+            allNodes[path] = FolderNode(
+                name: name,
+                path: path,
+                isSelected: isSelected,
+                fileCount: fileCount,
+                children: []
+            )
         }
-        return children
+
+        // Build hierarchy: assign children to parents
+        for (path, var node) in allNodes {
+            let components = path.components(separatedBy: "/")
+
+            // Find all direct children
+            var children: [FolderNode] = []
+            for (childPath, childNode) in allNodes {
+                let childComponents = childPath.components(separatedBy: "/")
+
+                // Check if this is a direct child (one level deeper)
+                if childComponents.count == components.count + 1 {
+                    let parentPath = childComponents.dropLast().joined(separator: "/")
+                    if parentPath == path {
+                        children.append(childNode)
+                    }
+                }
+            }
+
+            node.children = children.sorted { $0.name < $1.name }
+            allNodes[path] = node
+        }
+
+        // Return only root level folders
+        let rootNodes = allNodes.values.filter { node in
+            !node.path.contains("/") || node.path.components(separatedBy: "/").count == 1
+        }
+
+        print("📁 Built \(rootNodes.count) root folders")
+        return rootNodes.sorted { $0.name < $1.name }
     }
 
     private func selectAll() {
@@ -241,38 +286,93 @@ struct FolderNode: Identifiable {
     let path: String
     var isSelected: Bool
     var fileCount: Int
-    var children: [FolderNode] = []
+    var children: [FolderNode]
+
+    init(name: String, path: String, isSelected: Bool, fileCount: Int, children: [FolderNode] = []) {
+        self.name = name
+        self.path = path
+        self.isSelected = isSelected
+        self.fileCount = fileCount
+        self.children = children
+    }
 }
 
 // MARK: - Folder Row
 
 struct FolderRow: View {
     @Binding var node: FolderNode
+    @State private var isExpanded: Bool = true
+    let level: Int
+
+    init(node: Binding<FolderNode>, level: Int = 0) {
+        self._node = node
+        self.level = level
+    }
 
     var body: some View {
-        HStack {
-            Image(systemName: node.children.isEmpty ? "doc.text" : "folder")
-                .foregroundStyle(node.isSelected ? .blue : .secondary)
+        VStack(alignment: .leading, spacing: 4) {
+            // Main folder row
+            HStack(spacing: 8) {
+                // Indentation
+                if level > 0 {
+                    Spacer()
+                        .frame(width: CGFloat(level * 20))
+                }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(node.name)
+                // Expand/collapse chevron for folders with children
+                if !node.children.isEmpty {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isExpanded.toggle()
+                        }
+                    } label: {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 16)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Spacer()
+                        .frame(width: 16)
+                }
+
+                Image(systemName: node.children.isEmpty ? "doc.text" : "folder.fill")
+                    .foregroundStyle(node.isSelected ? .blue : .secondary)
                     .font(.body)
 
-                if node.fileCount > 0 {
-                    Text("\(node.fileCount) markdown files")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(node.name)
+                        .font(.subheadline)
+                        .fontWeight(level == 0 ? .semibold : .regular)
+
+                    if node.fileCount > 0 {
+                        Text("\(node.fileCount) files")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $node.isSelected)
+                    .labelsHidden()
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+
+            // Children (shown when expanded)
+            if isExpanded && !node.children.isEmpty {
+                ForEach(node.children.indices, id: \.self) { index in
+                    FolderRow(
+                        node: Binding(
+                            get: { node.children[index] },
+                            set: { node.children[index] = $0 }
+                        ),
+                        level: level + 1
+                    )
                 }
             }
-
-            Spacer()
-
-            Toggle("", isOn: $node.isSelected)
-                .labelsHidden()
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            node.isSelected.toggle()
         }
     }
 }
