@@ -36,11 +36,8 @@ class RepetitionEngine {
         )
 
         guard let allSections = try? modelContext.fetch(descriptor) else {
-            print("⚠️ RepetitionEngine: Failed to fetch sections")
             return nil
         }
-
-        print("📚 RepetitionEngine: Total sections: \(allSections.count)")
 
         // Filter sections based on repository path settings
         let filteredSections = allSections.filter { section in
@@ -51,12 +48,8 @@ class RepetitionEngine {
             return repository.shouldIncludePath(file.path)
         }
 
-        print("📁 RepetitionEngine: Filtered to \(filteredSections.count) sections based on path settings")
-
         // Build efficient lookup for leaf sections
         let leafSections = findLeafSections(in: filteredSections)
-
-        print("🍃 RepetitionEngine: Leaf sections: \(leafSections.count)")
 
         // If no leaf sections found, fall back to filtered sections
         let sectionsToConsider = leafSections.isEmpty ? filteredSections : leafSections
@@ -66,14 +59,7 @@ class RepetitionEngine {
             section1.reviewPriority > section2.reviewPriority
         }
 
-        let nextSection = sortedSections.first
-        if let section = nextSection {
-            print("✅ RepetitionEngine: Selected section '\(section.title)' (level: \(section.level))")
-        } else {
-            print("❌ RepetitionEngine: No sections available")
-        }
-
-        return nextSection
+        return sortedSections.first
     }
 
     /// Efficiently find all leaf sections (O(n) instead of O(n²))

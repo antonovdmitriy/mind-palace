@@ -25,9 +25,9 @@ struct SectionCardView: View {
     private func handleMarkdownLink(_ url: URL) -> OpenURLAction.Result {
         let urlString = url.absoluteString
 
-        // Ignore anchor links (internal document links starting with #)
+        // Handle anchor links (internal document links starting with #)
         if urlString.hasPrefix("#") {
-            print("ℹ️ Ignoring anchor link: \(urlString)")
+            handleAnchorLink(urlString)
             return .handled
         }
 
@@ -37,8 +37,37 @@ struct SectionCardView: View {
             return .handled
         }
 
-        print("⚠️ Unsupported link type: \(urlString)")
         return .discarded
+    }
+
+    // Navigate to section via anchor link
+    private func handleAnchorLink(_ urlString: String) {
+        let anchor = String(urlString.dropFirst()) // Remove the '#'
+
+        // Decode URL-encoded anchor (e.g., %D0%BB%D1%8E%D0%B4%D0%BE%D0%B2%D0%B8%D0%BA)
+        guard let decodedAnchor = anchor.removingPercentEncoding else {
+            return
+        }
+
+        // Find section by anchor in the current file
+        let fileSections = viewModel.getFileSections()
+        let normalizedAnchor = decodedAnchor.lowercased()
+
+        if let targetSection = fileSections.first(where: { section in
+            let sectionAnchor = generateAnchor(from: section.title)
+            return sectionAnchor == normalizedAnchor
+        }) {
+            viewModel.navigateToSection(targetSection)
+        }
+    }
+
+    // Generate anchor from title (matches GitHub's anchor format)
+    private func generateAnchor(from title: String) -> String {
+        return title
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")).inverted)
+            .joined()
     }
 
     var body: some View {
@@ -207,6 +236,8 @@ struct SectionCardView: View {
                         .markdownBlockStyle(\.codeBlock) { configuration in
                             HighlightedCodeBlock(configuration: configuration)
                         }
+                        .markdownTableBorderStyle(.init(color: .secondary))
+                        .markdownTableBackgroundStyle(.alternatingRows(.secondary.opacity(0.1), Color.clear))
                         .markdownImageProvider(
                             GitHubImageProvider(
                                 repository: section.file?.repository,

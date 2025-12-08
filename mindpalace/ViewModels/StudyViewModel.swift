@@ -85,10 +85,10 @@ class StudyViewModel {
         }
     }
 
-    /// Navigate directly to a specific section from TOC
+    /// Navigate directly to a specific section from TOC or anchor link
     func navigateToSection(_ section: MarkdownSection) {
-        // Add current state to stack if we're in full document view
-        if isShowingFullDocument, let current = currentSection {
+        // Add current section to stack before navigating
+        if let current = currentSection {
             navigationStack.append(current)
         }
 
