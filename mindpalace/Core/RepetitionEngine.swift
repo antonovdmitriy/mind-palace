@@ -86,13 +86,55 @@ class RepetitionEngine {
                     isLeaf = true // Last section in file
                 }
 
-                if isLeaf {
+                if isLeaf && !shouldSkipSection(section) {
                     leafSections.append(section)
                 }
             }
         }
 
         return leafSections
+    }
+
+    /// Check if section should be skipped (e.g., table of contents, empty sections)
+    private func shouldSkipSection(_ section: MarkdownSection) -> Bool {
+        let title = section.title.lowercased()
+        let content = section.content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Skip sections with TOC-like titles
+        let tocTitles = [
+            "table of contents",
+            "содержание",
+            "оглавление",
+            "toc",
+            "contents",
+            "index"
+        ]
+
+        for tocTitle in tocTitles {
+            if title.contains(tocTitle) {
+                return true
+            }
+        }
+
+        // Skip sections that are too short (less than 50 characters)
+        if content.count < 50 {
+            return true
+        }
+
+        // Skip sections that are mostly links (more than 70% of lines start with -)
+        let lines = content.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        if lines.count > 3 {
+            let linkLines = lines.filter { line in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                return trimmed.hasPrefix("-") || trimmed.hasPrefix("*") || trimmed.hasPrefix("[")
+            }
+            let linkRatio = Double(linkLines.count) / Double(lines.count)
+            if linkRatio > 0.7 {
+                return true
+            }
+        }
+
+        return false
     }
 
     /// Returns multiple sections for batch review

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var autoSync = true
     @State private var githubToken = ""
     @State private var showingTokenInput = false
+    @State private var showingResetConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -63,8 +64,14 @@ struct SettingsView: View {
                     Button("Import Data") {
                         // TODO: Implement import
                     }
+
+                    Button("Reset All Progress", role: .destructive) {
+                        showingResetConfirmation = true
+                    }
                 } header: {
                     Text("Data")
+                } footer: {
+                    Text("Reset all progress will delete all repetition records. This action cannot be undone.")
                 }
 
                 Section {
@@ -100,6 +107,14 @@ struct SettingsView: View {
                     showingTokenInput = false
                 }
             }
+            .alert("Reset All Progress?", isPresented: $showingResetConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Reset", role: .destructive) {
+                    resetAllProgress()
+                }
+            } message: {
+                Text("This will permanently delete all your repetition progress. You will start fresh with all sections. This action cannot be undone.")
+            }
         }
     }
 
@@ -128,6 +143,24 @@ struct SettingsView: View {
             userSettings.autoSync = autoSync
             userSettings.githubToken = githubToken.isEmpty ? nil : githubToken
             try? modelContext.save()
+        }
+    }
+
+    private func resetAllProgress() {
+        let descriptor = FetchDescriptor<RepetitionRecord>()
+
+        do {
+            let allRecords = try modelContext.fetch(descriptor)
+            print("🗑️ Deleting \(allRecords.count) repetition records")
+
+            for record in allRecords {
+                modelContext.delete(record)
+            }
+
+            try modelContext.save()
+            print("✅ Successfully reset all progress")
+        } catch {
+            print("❌ Error resetting progress: \(error)")
         }
     }
 }
