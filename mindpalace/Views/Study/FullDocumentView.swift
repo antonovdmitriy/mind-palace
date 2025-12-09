@@ -9,6 +9,7 @@ struct FullDocumentView: View {
     @State private var scrollTarget: String?
     @State private var preloadedAnchors: Set<String> = []
     @State private var showBackToTop = false
+    @State private var showMindMap = false
 
     // Get content before first section (usually table of contents)
     private var preambleContent: String? {
@@ -272,21 +273,43 @@ struct FullDocumentView: View {
                 }
                 .animation(.easeInOut(duration: 0.2), value: isLoading)
 
-                // Floating close button
+                // Floating buttons in top-right corner
                 if !isLoading {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.white, .gray.opacity(0.8))
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .frame(width: 32, height: 32)
-                            )
+                    VStack(alignment: .trailing, spacing: 0) {
+                        HStack(spacing: 12) {
+                            // Mind Map button
+                            Button {
+                                showMindMap = true
+                            } label: {
+                                Image(systemName: "circle.hexagongrid.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(.white, .purple.opacity(0.8))
+                                    .background(
+                                        Circle()
+                                            .fill(.ultraThinMaterial)
+                                            .frame(width: 28, height: 28)
+                                    )
+                            }
+                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+
+                            // Close button
+                            Button {
+                                dismiss()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(.white, .gray.opacity(0.8))
+                                    .background(
+                                        Circle()
+                                            .fill(.ultraThinMaterial)
+                                            .frame(width: 28, height: 28)
+                                    )
+                            }
+                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        }
+
+                        Spacer()
                     }
-                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                     .padding()
                 }
             }
@@ -298,6 +321,14 @@ struct FullDocumentView: View {
                 Button("Done") {
                     dismiss()
                 }
+            }
+        }
+        .sheet(isPresented: $showMindMap) {
+            MindMapView(file: file) { section in
+                // Scroll to selected section when mind map node is tapped
+                let anchor = titleToAnchor(section.title)
+                scrollTarget = anchor
+                tryScrollToAnchor(anchor, scrollProxy: nil, attempt: 0)
             }
         }
         .task {
