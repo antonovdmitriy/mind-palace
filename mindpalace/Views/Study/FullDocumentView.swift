@@ -5,6 +5,7 @@ struct FullDocumentView: View {
     let file: MarkdownFile
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var defaultOpenURL
+    @State private var isLoading = true
 
     // Handle markdown link clicks
     private func handleMarkdownLink(_ url: URL) -> OpenURLAction.Result {
@@ -26,7 +27,18 @@ struct FullDocumentView: View {
 
     var body: some View {
         NavigationStack {
-            if file.sections.isEmpty {
+            Group {
+                if isLoading {
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Loading document...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if file.sections.isEmpty {
                 // Fallback: show full content if no sections
                 ScrollView {
                     if let content = file.content {
@@ -89,7 +101,9 @@ struct FullDocumentView: View {
                         }
                     }
                 }
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: isLoading)
         }
         .navigationTitle(file.fileName)
         .navigationBarTitleDisplayMode(.inline)
@@ -98,6 +112,13 @@ struct FullDocumentView: View {
                 Button("Done") {
                     dismiss()
                 }
+            }
+        }
+        .task {
+            // Simulate loading delay for smooth transition
+            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isLoading = false
             }
         }
     }
