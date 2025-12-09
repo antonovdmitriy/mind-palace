@@ -163,7 +163,9 @@ struct SectionCardView: View {
 
                     if viewModel.canNavigateBack() {
                         Button {
-                            viewModel.navigateBack()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.navigateBack()
+                            }
                         } label: {
                             Image(systemName: "arrow.down.circle.fill")
                                 .font(.title3)
@@ -173,7 +175,9 @@ struct SectionCardView: View {
 
                     if viewModel.canNavigateUp() {
                         Button {
-                            viewModel.navigateToParent()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.navigateToParent()
+                            }
                         } label: {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.title3)
@@ -312,8 +316,6 @@ struct SectionCardView: View {
 
                 // Got it button
                 Button {
-                    let generator = UINotificationFeedbackGenerator()
-                    generator.notificationOccurred(.success)
                     onReviewed()
                 } label: {
                     HStack(spacing: 8) {
