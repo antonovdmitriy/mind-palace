@@ -10,6 +10,7 @@ struct SectionCardView: View {
 
     @State private var showingFullDocument = false
     @State private var showingIgnoreConfirmation = false
+    @State private var isLoadingContent = false
     @Environment(\.openURL) private var defaultOpenURL
 
     // Helper function for level colors
@@ -163,8 +164,13 @@ struct SectionCardView: View {
 
                     if viewModel.canNavigateBack() {
                         Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                viewModel.navigateBack()
+                            Task {
+                                isLoadingContent = true
+                                try? await Task.sleep(nanoseconds: 150_000_000) // 0.15 seconds
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.navigateBack()
+                                    isLoadingContent = false
+                                }
                             }
                         } label: {
                             Image(systemName: "arrow.down.circle.fill")
@@ -175,8 +181,13 @@ struct SectionCardView: View {
 
                     if viewModel.canNavigateUp() {
                         Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                viewModel.navigateToParent()
+                            Task {
+                                isLoadingContent = true
+                                try? await Task.sleep(nanoseconds: 150_000_000) // 0.15 seconds
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.navigateToParent()
+                                    isLoadingContent = false
+                                }
                             }
                         } label: {
                             Image(systemName: "arrow.up.circle.fill")
@@ -201,9 +212,10 @@ struct SectionCardView: View {
             Divider()
 
             // Content - takes all available space
-            if viewModel.isShowingFullDocument {
-                // Show interactive table of contents
-                ScrollView {
+            ZStack {
+                if viewModel.isShowingFullDocument {
+                    // Show interactive table of contents
+                    ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         // List of sections - compact version
                         ForEach(viewModel.getFileSections()) { tocSection in
@@ -246,13 +258,12 @@ struct SectionCardView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                }
-                .frame(maxHeight: .infinity)
-            } else {
-                // Show markdown content
-                ZStack {
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                    }
+                    .frame(maxHeight: .infinity)
+                } else {
+                    // Show markdown content
                     GeometryReader { geometry in
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
@@ -281,7 +292,23 @@ struct SectionCardView: View {
                     }
                     .frame(maxHeight: .infinity)
                 }
+
+                // Loading overlay
+                if isLoadingContent {
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Loading...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemBackground).opacity(0.8))
+                    .transition(.opacity)
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: isLoadingContent)
 
         }
         .background(Color(.systemBackground))
@@ -329,7 +356,7 @@ struct SectionCardView: View {
                     .padding(.vertical, 12)
                     .background(
                         LinearGradient(
-                            colors: [Color(red: 0.2, green: 0.8, blue: 0.4), Color(red: 0.1, green: 0.7, blue: 0.35)],
+                            colors: [Color(red: 0.2, green: 0.7, blue: 0.3), Color(red: 0.15, green: 0.55, blue: 0.25)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
