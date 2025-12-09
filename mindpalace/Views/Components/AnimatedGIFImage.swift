@@ -9,6 +9,9 @@ struct AnimatedGIFImage: UIViewRepresentable {
     func makeUIView(context: Context) -> UIImageView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+        imageView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         return imageView
     }
 
@@ -62,6 +65,8 @@ struct EnhancedAsyncImage: View {
             if url != nil {
                 if isLoading {
                     ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 200)
                         .task {
                             await loadImage()
                         }
@@ -71,6 +76,7 @@ struct EnhancedAsyncImage: View {
                         showingZoom = true
                     } label: {
                         AnimatedGIFImage(data: data)
+                            .frame(maxWidth: .infinity)
                             .frame(maxHeight: 400)
                     }
                     .buttonStyle(.plain)
@@ -82,11 +88,13 @@ struct EnhancedAsyncImage: View {
                         Image(uiImage: uiImage)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.plain)
                 } else {
                     Image(systemName: "photo.fill")
                         .foregroundStyle(.gray)
+                        .frame(height: 200)
                 }
             } else {
                 Image(systemName: "photo.fill")
@@ -94,8 +102,12 @@ struct EnhancedAsyncImage: View {
             }
         }
         .fullScreenCover(isPresented: $showingZoom) {
-            if let data = imageData {
-                ZoomableGIFView(data: data, url: url, isGIF: isGIF)
+            if isGIF, let data = imageData {
+                // Use custom GIF viewer for animated GIFs
+                ZoomableGIFView(data: data)
+            } else if let url = url {
+                // Use optimized ZoomableImageView for static images
+                ZoomableImageView(url: url)
             }
         }
     }
@@ -120,11 +132,9 @@ struct EnhancedAsyncImage: View {
     }
 }
 
-// Zoomable view for both GIF and static images
+// Zoomable view for animated GIFs
 struct ZoomableGIFView: View {
     let data: Data
-    let url: URL?
-    let isGIF: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -137,17 +147,9 @@ struct ZoomableGIFView: View {
                 ZStack {
                     Color.black.ignoresSafeArea()
 
-                    if isGIF {
-                        AnimatedGIFImage(data: data)
-                            .scaleEffect(scale)
-                            .offset(offset)
-                    } else if let uiImage = UIImage(data: data) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .scaleEffect(scale)
-                            .offset(offset)
-                    }
+                    AnimatedGIFImage(data: data)
+                        .scaleEffect(scale)
+                        .offset(offset)
                 }
                 .gesture(
                     MagnificationGesture()
