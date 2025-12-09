@@ -30,7 +30,7 @@ struct FullDocumentView: View {
         return title
             .lowercased()
             .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "[^\\p{L}\\p{N}-]", with: "", options: .regularExpression)
     }
 
     // Handle markdown link clicks
@@ -39,7 +39,13 @@ struct FullDocumentView: View {
 
         // Handle anchor links (internal document links starting with #)
         if urlString.hasPrefix("#") {
-            let anchor = String(urlString.dropFirst()) // Remove the #
+            var anchor = String(urlString.dropFirst()) // Remove the #
+
+            // Decode URL-encoded anchor (for non-ASCII characters like Cyrillic)
+            if let decoded = anchor.removingPercentEncoding {
+                anchor = decoded
+            }
+
             if !anchor.isEmpty {
                 scrollTarget = anchor
                 print("📍 Trying to scroll to anchor: \(anchor)")
