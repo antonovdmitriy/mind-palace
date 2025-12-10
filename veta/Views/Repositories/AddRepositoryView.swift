@@ -9,6 +9,8 @@ struct AddRepositoryView: View {
     @State private var repositoryURL = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var addedRepository: GitHubRepository?
+    @State private var showSyncConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -85,6 +87,17 @@ struct AddRepositoryView: View {
                     .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
                 }
             }
+            .alert("Repository Added", isPresented: $showSyncConfirmation) {
+                Button("Sync Now") {
+                    syncAddedRepository()
+                }
+                Button("Later", role: .cancel) {
+                    addedRepository = nil
+                    dismiss()
+                }
+            } message: {
+                Text("Would you like to sync this repository now to download its content?")
+            }
         }
     }
 
@@ -120,7 +133,8 @@ struct AddRepositoryView: View {
                     try? modelContext.save()
 
                     isLoading = false
-                    dismiss()
+                    addedRepository = repository
+                    showSyncConfirmation = true
                 }
             } catch let error as GitHubAPIError {
                 await MainActor.run {
@@ -131,6 +145,26 @@ struct AddRepositoryView: View {
                 await MainActor.run {
                     errorMessage = "Failed to add repository: \(error.localizedDescription)"
                     isLoading = false
+                }
+            }
+        }
+    }
+
+    private func syncAddedRepository() {
+        guard let repository = addedRepository else { return }
+
+        Task {
+            let syncManager = SyncManager(modelContext: modelContext)
+            do {
+                try await syncManager.syncRepository(repository)
+                await MainActor.run {
+                    addedRepository = nil
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Sync failed: \(error.localizedDescription)"
+                    addedRepository = nil
                 }
             }
         }

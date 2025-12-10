@@ -47,11 +47,12 @@ class SyncManager {
             )
             let defaultBranch = repoInfo.defaultBranch
 
-            // Fetch all markdown files
+            // Fetch all markdown files using the correct branch
             progress = 0.2
             let markdownFiles = try await gitHubService.listMarkdownFiles(
                 owner: repository.owner,
-                repo: repository.name
+                repo: repository.name,
+                branch: defaultBranch
             )
 
             // Filter files based on repository settings

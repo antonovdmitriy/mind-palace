@@ -82,6 +82,22 @@ struct GitHubRateLimit: Codable {
     }
 }
 
+struct GitHubTree: Codable {
+    let sha: String
+    let url: String
+    let tree: [TreeItem]
+    let truncated: Bool
+
+    struct TreeItem: Codable {
+        let path: String
+        let mode: String
+        let type: String
+        let sha: String
+        let size: Int?
+        let url: String
+    }
+}
+
 // MARK: - Request/Response helpers
 
 enum GitHubAPIError: Error, LocalizedError {

@@ -5,6 +5,7 @@ struct RepositoriesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var repositories: [GitHubRepository]
     @State private var showingAddRepository = false
+    @State private var showingSuggestedRepositories = false
     @State private var isSyncing = false
     @State private var syncManager: SyncManager?
     @State private var errorMessage: String?
@@ -32,8 +33,18 @@ struct RepositoriesView: View {
             .navigationTitle("Repositories")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingAddRepository = true
+                    Menu {
+                        Button {
+                            showingAddRepository = true
+                        } label: {
+                            Label("Add Repository", systemImage: "plus.circle")
+                        }
+
+                        Button {
+                            showingSuggestedRepositories = true
+                        } label: {
+                            Label("Browse Examples", systemImage: "sparkles")
+                        }
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -50,6 +61,9 @@ struct RepositoriesView: View {
             }
             .sheet(isPresented: $showingAddRepository) {
                 AddRepositoryView()
+            }
+            .sheet(isPresented: $showingSuggestedRepositories) {
+                SuggestedRepositoriesSheet(onRepositoryAdded: {})
             }
             .alert("Sync Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") {
@@ -132,14 +146,44 @@ struct RepositoriesView: View {
                 .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
             }
 
+            Text("or")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Button {
+                showingSuggestedRepositories = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                    Text("Browse Examples")
+                }
+                .font(.headline)
+                .foregroundStyle(.blue)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(Color.blue.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
             Spacer()
         }
         .frame(maxWidth: .infinity)
     }
 
     private func deleteRepository(_ repository: GitHubRepository) {
+        // Force load all attributes before deletion to avoid SwiftData faults
+        _ = repository.includedPaths
+        _ = repository.excludedPaths
+        _ = repository.favoritePaths
+        _ = repository.files
+
         modelContext.delete(repository)
-        try? modelContext.save()
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Error deleting repository: \(error)")
+        }
     }
 
     private func syncAll() {

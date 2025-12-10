@@ -24,22 +24,40 @@ class GitHubService: Sendable {
         return try await performRequest(url: url)
     }
 
-    /// Lists all markdown files in a repository recursively
-    func listMarkdownFiles(owner: String, repo: String, path: String = "") async throws -> [GitHubContent] {
-        var allFiles: [GitHubContent] = []
-        let contents = try await getContents(owner: owner, repo: repo, path: path)
+    /// Lists all markdown files in a repository using Git Trees API (single request)
+    func listMarkdownFiles(owner: String, repo: String, branch: String = "main") async throws -> [GitHubContent] {
+        // Use Git Trees API to get all files in one request
+        let tree = try await getTree(owner: owner, repo: repo, branch: branch)
 
-        for content in contents {
-            if content.type == .file && content.name.isMarkdownFile {
-                allFiles.append(content)
-            } else if content.type == .dir {
-                // Recursively get files from subdirectories
-                let subFiles = try await listMarkdownFiles(owner: owner, repo: repo, path: content.path)
-                allFiles.append(contentsOf: subFiles)
-            }
+        // Filter only markdown files (type = "blob" means file)
+        let markdownFiles = tree.tree.filter { item in
+            item.type == "blob" && item.path.isMarkdownFile
         }
 
-        return allFiles
+        // Convert TreeItem to GitHubContent
+        return markdownFiles.map { item in
+            GitHubContent(
+                name: (item.path as NSString).lastPathComponent,
+                path: item.path,
+                sha: item.sha,
+                size: item.size ?? 0,
+                url: item.url,
+                htmlUrl: "https://github.com/\(owner)/\(repo)/blob/\(branch)/\(item.path)",
+                gitUrl: item.url,
+                downloadUrl: "\(Constants.GitHub.rawContentURL)/\(owner)/\(repo)/\(branch)/\(item.path)",
+                type: .file
+            )
+        }
+    }
+
+    /// Gets repository tree using Git Trees API (recursive)
+    private func getTree(owner: String, repo: String, branch: String) async throws -> GitHubTree {
+        let urlString = "\(Constants.GitHub.baseURL)/repos/\(owner)/\(repo)/git/trees/\(branch)?recursive=1"
+        guard let url = URL(string: urlString) else {
+            throw GitHubAPIError.invalidURL
+        }
+
+        return try await performRequest(url: url)
     }
 
     /// Gets contents of a directory or file

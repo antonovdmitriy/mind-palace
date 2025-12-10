@@ -50,4 +50,52 @@ enum Constants {
         static let cardPadding: CGFloat = 16
         static let animationDuration: Double = 0.3
     }
+
+    // MARK: - Suggested Repositories
+    struct SuggestedRepository: Identifiable {
+        let id = UUID()
+        let name: String
+        let url: String
+        let description: String
+        let category: String
+        let icon: String
+    }
+
+    static let suggestedRepositories: [SuggestedRepository] = [
+        SuggestedRepository(
+            name: "You Don't Know JS",
+            url: "https://github.com/getify/You-Dont-Know-JS",
+            description: "Book series on JavaScript - deep dive into core mechanisms",
+            category: "JavaScript",
+            icon: "📚"
+        ),
+        SuggestedRepository(
+            name: "The Rust Book",
+            url: "https://github.com/rust-lang/book",
+            description: "The official Rust programming language book",
+            category: "Rust",
+            icon: "🦀"
+        ),
+        SuggestedRepository(
+            name: "Pro Git",
+            url: "https://github.com/progit/progit2",
+            description: "Pro Git book - everything about Git version control",
+            category: "Git",
+            icon: "📖"
+        ),
+        SuggestedRepository(
+            name: "TypeScript Handbook",
+            url: "https://github.com/microsoft/TypeScript-Handbook",
+            description: "Official TypeScript documentation and guides",
+            category: "TypeScript",
+            icon: "📘"
+        ),
+        SuggestedRepository(
+            name: "Python Algorithms",
+            url: "https://github.com/TheAlgorithms/Python",
+            description: "All algorithms implemented in Python with explanations",
+            category: "Algorithms",
+            icon: "🐍"
+        )
+    ]
 }
