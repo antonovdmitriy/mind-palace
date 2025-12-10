@@ -1,14 +1,30 @@
 # Mind Palace
 
-A spaced repetition learning app for reviewing markdown notes stored in GitHub repositories.
+**Mind Palace** is an iOS app for effective learning and retention of knowledge from your GitHub markdown notes.
+
+## Why Mind Palace?
+
+Do you store your study notes, learning materials, or technical documentation in markdown files on GitHub? Mind Palace transforms these notes into interactive study cards using spaced repetition algorithm.
+
+**The Problem:** Notes are stored in repositories but aren't reviewed systematically — knowledge fades away.
+
+**The Solution:** Mind Palace automatically breaks down your markdown documents into sections, tracks your learning progress for each section, and reminds you to review at the optimal time for long-term retention.
+
+**Who is it for:**
+- 🎓 Students learning new topics
+- 👨‍💻 Developers memorizing syntax and APIs
+- 📚 Anyone who keeps study notes in markdown and wants to review them effectively
 
 ## Features
 
 - 📚 Import markdown files from GitHub repositories (public and private)
 - 🧠 Smart repetition algorithm for effective learning
+- 📖 Full document viewer with table of contents navigation
+- 💻 Syntax highlighting for code blocks (supports multiple languages)
 - 📊 Track your progress and streaks
 - 🔄 Sync progress across devices via GitHub Gist
-- 📱 Native iOS and macOS apps
+- 🌓 Dark and light theme support
+- 📱 Native iOS app
 
 ## Architecture
 
@@ -16,20 +32,32 @@ A spaced repetition learning app for reviewing markdown notes stored in GitHub r
 - **SwiftData** for local persistence
 - **GitHub API** for fetching repositories and files
 - **MarkdownUI** for rendering markdown content
+- **Highlightr** for syntax highlighting in code blocks
+- **KeychainAccess** for secure token storage
 
 ## Project Structure
 
 ```
-MindPalace/
-├── Shared/              # Shared code for iOS and macOS
-│   ├── Models/          # Data models (SwiftData)
-│   ├── Services/        # Business logic services
-│   ├── Core/            # Core algorithms (repetition engine)
-│   └── Utilities/       # Helpers and extensions
-├── iOS/                 # iOS-specific code
-│   ├── Views/           # SwiftUI views
-│   └── ViewModels/      # View models
-└── macOS/              # macOS-specific code (future)
+mindpalace/
+├── Models/              # Data models (SwiftData)
+├── Services/            # Business logic services
+│   ├── GitHub/          # GitHub API integration
+│   ├── Gist/            # Gist sync service
+│   ├── Markdown/        # Markdown parsing
+│   └── Storage/         # Local storage management
+├── Core/                # Core algorithms (repetition engine)
+├── Utilities/           # Helpers and utilities
+│   ├── Extensions/      # Swift extensions
+│   ├── CodeSyntaxHighlighter.swift
+│   └── HTMLToMarkdownConverter.swift
+├── Views/               # SwiftUI views
+│   ├── Study/           # Study mode views
+│   ├── Documents/       # Document browser
+│   ├── Repositories/    # Repository management
+│   ├── Statistics/      # Progress tracking
+│   ├── Settings/        # App settings
+│   └── Components/      # Reusable UI components
+└── ViewModels/          # View models
 ```
 
 ## Getting Started
@@ -60,19 +88,25 @@ Current version: **0.1.0 (MVP in development)**
 
 ### Completed
 - ✅ Data models with SwiftData
-- ✅ GitHub API integration
-- ✅ Markdown parsing
+- ✅ GitHub API integration (public and private repos)
+- ✅ Markdown parsing and rendering
+- ✅ Syntax highlighting for code blocks
+- ✅ Full document viewer with table of contents
+- ✅ Anchor navigation with non-ASCII character support
 - ✅ Basic repetition algorithm
-- ✅ iOS UI (Study, Repositories, Statistics, Settings)
+- ✅ GitHub Gist synchronization
+- ✅ Secure token storage with Keychain
+- ✅ iOS UI (Study, Documents, Repositories, Statistics, Settings)
+- ✅ Dark and light theme support
 
 ### TODO
 - ⏳ GitHub OAuth authentication
-- ⏳ GitHub Gist synchronization
 - ⏳ Image caching and optimization
 - ⏳ macOS version
 - ⏳ Advanced spaced repetition (SM-2 algorithm)
 - ⏳ Search and filtering
 - ⏳ Export/import functionality
+- ⏳ Markdown code block parsing improvements
 
 ## License
 
