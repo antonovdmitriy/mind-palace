@@ -7,6 +7,8 @@
 - Always wait for the user to say "комит" or "пуш" before running git commands
 - Do not automatically commit after completing tasks
 - Do not assume permission to push to remote repository
+- **Never** add "Generated with Claude Code" or "Co-Authored-By: Claude" to commit messages
+- Keep commit messages clean and professional without AI attribution
 
 ## Development Guidelines
 

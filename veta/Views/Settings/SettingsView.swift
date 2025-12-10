@@ -124,7 +124,7 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Link(destination: URL(string: "https://github.com/antonovdmitriy/mind-palace")!) {
+                    Link(destination: URL(string: "https://github.com/antonovdmitriy/veta")!) {
                         HStack {
                             Label("GitHub Repository", systemImage: "link")
                             Spacer()
@@ -134,7 +134,7 @@ struct SettingsView: View {
                         }
                     }
 
-                    Link(destination: URL(string: "https://github.com/antonovdmitriy/mind-palace/issues")!) {
+                    Link(destination: URL(string: "https://github.com/antonovdmitriy/veta/issues")!) {
                         HStack {
                             Label("Report Issue", systemImage: "exclamationmark.bubble")
                             Spacer()
