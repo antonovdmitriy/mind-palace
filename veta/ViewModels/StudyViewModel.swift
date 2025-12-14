@@ -29,6 +29,12 @@ class StudyViewModel {
         return section
     }
 
+    /// Refresh the study session (invalidate cache and load new section)
+    func refresh() {
+        repetitionEngine.invalidateCache()
+        loadStatistics()
+    }
+
     /// Get the original section that was loaded for review (before any navigation)
     func getOriginalSection() -> MarkdownSection? {
         // If navigation stack is empty, current section is the original

@@ -7,6 +7,7 @@ struct SuggestedRepositoriesSheet: View {
     @Query private var existingRepositories: [GitHubRepository]
 
     let onRepositoryAdded: () -> Void
+    let onRepositoryAddedWithSync: ((GitHubRepository) -> Void)?
 
     @State private var addingRepository: Constants.SuggestedRepository?
     @State private var isAdding = false
@@ -112,21 +113,10 @@ struct SuggestedRepositoriesSheet: View {
     private func syncAddedRepository() {
         guard let repository = addedRepository else { return }
 
-        Task {
-            let syncManager = SyncManager(modelContext: modelContext)
-            do {
-                try await syncManager.syncRepository(repository)
-                await MainActor.run {
-                    addedRepository = nil
-                    dismiss()
-                }
-            } catch {
-                print("Error syncing repository: \(error)")
-                await MainActor.run {
-                    addedRepository = nil
-                }
-            }
-        }
+        // Close sheet immediately and pass repository to parent for sync
+        addedRepository = nil
+        dismiss()
+        onRepositoryAddedWithSync?(repository)
     }
 }
 
@@ -184,12 +174,15 @@ struct SuggestedRepositoryRow: View {
 }
 
 #Preview {
-    SuggestedRepositoriesSheet(onRepositoryAdded: {})
-        .modelContainer(for: [
-            GitHubRepository.self,
-            MarkdownFile.self,
-            MarkdownSection.self,
-            RepetitionRecord.self,
-            UserSettings.self
-        ], inMemory: true)
+    SuggestedRepositoriesSheet(
+        onRepositoryAdded: {},
+        onRepositoryAddedWithSync: nil
+    )
+    .modelContainer(for: [
+        GitHubRepository.self,
+        MarkdownFile.self,
+        MarkdownSection.self,
+        RepetitionRecord.self,
+        UserSettings.self
+    ], inMemory: true)
 }

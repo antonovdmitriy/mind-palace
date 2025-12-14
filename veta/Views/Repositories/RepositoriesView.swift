@@ -9,6 +9,8 @@ struct RepositoriesView: View {
     @State private var isSyncing = false
     @State private var syncManager: SyncManager?
     @State private var errorMessage: String?
+    @State private var syncProgress: Double = 0.0
+    @State private var hasAppearedOnce = false
 
     var body: some View {
         NavigationStack {
@@ -63,7 +65,12 @@ struct RepositoriesView: View {
                 AddRepositoryView()
             }
             .sheet(isPresented: $showingSuggestedRepositories) {
-                SuggestedRepositoriesSheet(onRepositoryAdded: {})
+                SuggestedRepositoriesSheet(
+                    onRepositoryAdded: {},
+                    onRepositoryAddedWithSync: { repository in
+                        syncRepository(repository)
+                    }
+                )
             }
             .alert("Sync Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") {
@@ -76,23 +83,47 @@ struct RepositoriesView: View {
             }
             .overlay {
                 if isSyncing {
-                    VStack(spacing: 12) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .tint(.blue)
-                        Text("Syncing repositories...")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    ZStack {
+                        // Semi-transparent background to block interactions
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+
+                        // Progress card
+                        VStack(spacing: 16) {
+                            ProgressView(value: syncProgress, total: 1.0)
+                                .progressViewStyle(.linear)
+                                .frame(width: 200)
+                                .tint(.blue)
+
+                            VStack(spacing: 4) {
+                                Text("Syncing repositories...")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Text("\(Int(syncProgress * 100))%")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
+                        .padding(24)
+                        .background(Color(.systemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
                     }
-                    .padding(24)
-                    .background(Color(.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
                 }
             }
             .onAppear {
                 if syncManager == nil {
                     syncManager = SyncManager(modelContext: modelContext)
+                }
+
+                // Show suggested repositories on first launch if no repositories exist
+                if !hasAppearedOnce && repositories.isEmpty {
+                    hasAppearedOnce = true
+                    // Delay slightly to avoid sheet presentation issues
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingSuggestedRepositories = true
+                    }
                 }
             }
         }
@@ -186,19 +217,68 @@ struct RepositoriesView: View {
         }
     }
 
+    private func syncRepository(_ repository: GitHubRepository) {
+        guard let syncManager = syncManager else { return }
+
+        isSyncing = true
+        syncProgress = 0.0
+        errorMessage = nil
+
+        Task {
+            // Update progress periodically
+            let progressTask = Task {
+                while !Task.isCancelled {
+                    await MainActor.run {
+                        syncProgress = syncManager.progress
+                    }
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+            }
+
+            do {
+                try await syncManager.syncRepository(repository)
+                progressTask.cancel()
+                await MainActor.run {
+                    syncProgress = 1.0
+                    isSyncing = false
+                }
+            } catch {
+                progressTask.cancel()
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isSyncing = false
+                }
+            }
+        }
+    }
+
     private func syncAll() {
         guard let syncManager = syncManager else { return }
 
         isSyncing = true
+        syncProgress = 0.0
         errorMessage = nil
 
         Task {
+            // Update progress periodically
+            let progressTask = Task {
+                while !Task.isCancelled {
+                    await MainActor.run {
+                        syncProgress = syncManager.progress
+                    }
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+            }
+
             do {
                 try await syncManager.syncAllRepositories()
+                progressTask.cancel()
                 await MainActor.run {
+                    syncProgress = 1.0
                     isSyncing = false
                 }
             } catch {
+                progressTask.cancel()
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     isSyncing = false

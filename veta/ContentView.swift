@@ -11,7 +11,9 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var settings: [UserSettings]
+    @Query private var repositories: [GitHubRepository]
     @State private var selectedTab = 0
+    @State private var hasSetInitialTab = false
 
     private var currentTheme: AppTheme {
         settings.first?.theme ?? .system
@@ -61,6 +63,15 @@ struct ContentView: View {
                 .tag(4)
         }
         .preferredColorScheme(colorScheme)
+        .onAppear {
+            // On first launch, show Repositories tab if no repositories exist
+            if !hasSetInitialTab {
+                hasSetInitialTab = true
+                if repositories.isEmpty {
+                    selectedTab = 2 // Repositories tab
+                }
+            }
+        }
     }
 }
 

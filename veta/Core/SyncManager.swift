@@ -68,6 +68,9 @@ class SyncManager {
 
             progress = 1.0
 
+            // Notify that sync completed (so Study view can refresh)
+            NotificationCenter.default.post(name: NSNotification.Name("RepositorySyncCompleted"), object: nil)
+
         } catch {
             lastError = error
             print("❌ Error syncing \(repository.fullName): \(error)")
@@ -112,12 +115,18 @@ class SyncManager {
 
         // Process each markdown file
         let totalFiles = filteredFiles.count
+        print("📝 Processing \(totalFiles) markdown files...")
+
         for (index, fileURL) in filteredFiles.enumerated() {
             try await processLocalFile(fileURL, repository: repository, repoDir: repoDir)
             progress = 0.5 + (0.5 * Double(index + 1) / Double(totalFiles))
         }
 
-        print("✅ Archive sync complete: \(totalFiles) markdown files, \(categorized.assets.count) assets")
+        // Count total sections created
+        await MainActor.run {
+            let totalSections = repository.files.reduce(0) { $0 + $1.sections.count }
+            print("✅ Archive sync complete: \(totalFiles) markdown files, \(categorized.assets.count) assets, \(totalSections) sections created")
+        }
     }
 
     /// Syncs repository incrementally (for subsequent syncs)
@@ -176,6 +185,8 @@ class SyncManager {
         let content = try String(contentsOf: fileURL, encoding: .utf8)
         let relativePath = fileURL.path.replacingOccurrences(of: repoDir.path + "/", with: "")
 
+        print("📄 Processing file: \(relativePath), content length: \(content.count)")
+
         await MainActor.run {
             // Check if file already exists
             let existingFile = repository.files.first { $0.path == relativePath }
@@ -205,6 +216,7 @@ class SyncManager {
 
             // Parse markdown into sections
             let parsedSections = markdownParser.parse(content: content)
+            print("   ✂️ Parsed \(parsedSections.count) sections from \(relativePath)")
 
             // Create MarkdownSection objects
             for parsed in parsedSections {
@@ -220,7 +232,14 @@ class SyncManager {
                 modelContext.insert(section)
             }
 
-            try? modelContext.save()
+            do {
+                try modelContext.save()
+                if !parsedSections.isEmpty {
+                    print("   💾 Saved \(parsedSections.count) sections to database")
+                }
+            } catch {
+                print("   ❌ Error saving sections: \(error)")
+            }
         }
     }
 

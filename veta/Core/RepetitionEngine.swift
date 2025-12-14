@@ -29,6 +29,13 @@ class RepetitionEngine {
         self.modelContext = modelContext
     }
 
+    /// Invalidates the cache to force rebuild on next getNextSection call
+    func invalidateCache() {
+        cachedInterleavedSections = []
+        cacheTimestamp = nil
+        print("🔄 RepetitionEngine cache invalidated")
+    }
+
     // Get user settings or return defaults
     private func getUserSettings() -> UserSettings {
         let descriptor = FetchDescriptor<UserSettings>()

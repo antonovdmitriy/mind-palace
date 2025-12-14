@@ -34,7 +34,15 @@ struct StudyView: View {
             .onAppear {
                 if viewModel == nil {
                     viewModel = StudyViewModel(modelContext: modelContext)
+                } else {
+                    // Refresh cache when returning to study view
+                    viewModel?.refresh()
                 }
+                loadNextSection()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RepositorySyncCompleted"))) { _ in
+                // Refresh study view when sync completes
+                viewModel?.refresh()
                 loadNextSection()
             }
         }
