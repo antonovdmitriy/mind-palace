@@ -10,6 +10,7 @@ struct FolderSelectionView: View {
     @State private var folderStructure: [FolderNode] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showingActions = false
 
     var body: some View {
         NavigationStack {
@@ -37,18 +38,8 @@ struct FolderSelectionView: View {
                     VStack(spacing: 0) {
                         // Compact toolbar
                         HStack(spacing: 12) {
-                            Menu {
-                                Button {
-                                    selectAll()
-                                } label: {
-                                    Label("Select All", systemImage: "checkmark.circle")
-                                }
-
-                                Button {
-                                    deselectAll()
-                                } label: {
-                                    Label("Deselect All", systemImage: "circle")
-                                }
+                            Button {
+                                showingActions = true
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "checklist")
@@ -62,6 +53,7 @@ struct FolderSelectionView: View {
                                 .foregroundStyle(.blue)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
+                            .buttonStyle(.plain)
 
                             Spacer()
 
@@ -146,6 +138,15 @@ struct FolderSelectionView: View {
             }
             .onAppear {
                 loadFolderStructure()
+            }
+            .confirmationDialog("Selection Actions", isPresented: $showingActions) {
+                Button("Select All") {
+                    selectAll()
+                }
+                Button("Deselect All") {
+                    deselectAll()
+                }
+                Button("Cancel", role: .cancel) {}
             }
         }
     }
