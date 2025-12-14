@@ -66,8 +66,8 @@ struct FolderSelectionView: View {
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 6)
-                                    .background(Color.secondary.opacity(0.1))
-                                    .foregroundStyle(.secondary)
+                                    .background(Color.red.opacity(0.1))
+                                    .foregroundStyle(.red)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
                                 }
                                 .buttonStyle(.plain)
@@ -108,7 +108,7 @@ struct FolderSelectionView: View {
                                     .foregroundStyle(.secondary)
                                 Label("Favorite (higher priority)", systemImage: "star.fill")
                                     .font(.caption2)
-                                    .foregroundStyle(.yellow)
+                                    .foregroundStyle(.orange)
                             }
                         }
                         .padding(.horizontal)
@@ -485,7 +485,7 @@ struct FolderRow: View {
                     node.isFavorite.toggle()
                 } label: {
                     Image(systemName: node.isFavorite ? "star.fill" : "star")
-                        .foregroundStyle(node.isFavorite ? .yellow : .secondary)
+                        .foregroundStyle(node.isFavorite ? .orange : .secondary)
                         .font(.body)
                 }
                 .buttonStyle(.plain)
