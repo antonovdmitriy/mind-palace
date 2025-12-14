@@ -258,32 +258,39 @@ struct FolderSelectionView: View {
             )
         }
 
-        // Build hierarchy: assign children to parents
-        for (path, var node) in allNodes {
+        // Sort all paths by depth (deepest first) to build tree bottom-up
+        let sortedPaths = allNodes.keys.sorted { path1, path2 in
+            let depth1 = path1.components(separatedBy: "/").count
+            let depth2 = path2.components(separatedBy: "/").count
+            return depth1 > depth2  // Deeper paths first
+        }
+
+        // Build hierarchy from deepest to shallowest
+        for path in sortedPaths {
             let components = path.components(separatedBy: "/")
 
-            // Find all direct children (both folders and files)
-            var children: [FolderNode] = []
-            for (childPath, childNode) in allNodes {
-                let childComponents = childPath.components(separatedBy: "/")
+            // Skip root level items (they have no parent)
+            if components.count == 1 {
+                continue
+            }
 
-                // Check if this is a direct child (one level deeper)
-                if childComponents.count == components.count + 1 {
-                    let parentPath = childComponents.dropLast().joined(separator: "/")
-                    if parentPath == path {
-                        children.append(childNode)
+            // Find parent path
+            let parentPath = components.dropLast().joined(separator: "/")
+
+            // Add this node to parent's children
+            if var parentNode = allNodes[parentPath], let childNode = allNodes[path] {
+                parentNode.children.append(childNode)
+
+                // Sort children: folders first, then files, alphabetically within each group
+                parentNode.children.sort { a, b in
+                    if a.isFile != b.isFile {
+                        return !a.isFile // folders before files
                     }
+                    return a.name < b.name
                 }
-            }
 
-            // Sort: folders first, then files, alphabetically within each group
-            node.children = children.sorted { a, b in
-                if a.isFile != b.isFile {
-                    return !a.isFile // folders before files
-                }
-                return a.name < b.name
+                allNodes[parentPath] = parentNode
             }
-            allNodes[path] = node
         }
 
         // Return only root level items (folders and files)
