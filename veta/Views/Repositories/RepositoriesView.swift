@@ -10,7 +10,6 @@ struct RepositoriesView: View {
     @State private var syncManager: SyncManager?
     @State private var errorMessage: String?
     @State private var syncProgress: Double = 0.0
-    @State private var hasAppearedOnce = false
 
     var body: some View {
         NavigationStack {
@@ -115,15 +114,6 @@ struct RepositoriesView: View {
             .onAppear {
                 if syncManager == nil {
                     syncManager = SyncManager(modelContext: modelContext)
-                }
-
-                // Show suggested repositories on first launch if no repositories exist
-                if !hasAppearedOnce && repositories.isEmpty {
-                    hasAppearedOnce = true
-                    // Delay slightly to avoid sheet presentation issues
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showingSuggestedRepositories = true
-                    }
                 }
             }
         }
