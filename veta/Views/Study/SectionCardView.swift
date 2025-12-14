@@ -265,6 +265,7 @@ struct SectionCardView: View {
                     }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
+                        .padding(.bottom, 90) // Space for action buttons
                     }
                     .frame(maxHeight: .infinity)
                 } else {
@@ -301,6 +302,7 @@ struct SectionCardView: View {
                             .frame(width: geometry.size.width, alignment: .leading)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
+                            .padding(.bottom, 90) // Space for action buttons
                         }
                     }
                     .frame(maxHeight: .infinity)
@@ -324,6 +326,21 @@ struct SectionCardView: View {
 
         }
         .background(Color(.systemBackground))
+        .overlay(alignment: .bottom) {
+            // Gradient fade at bottom to indicate more content
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [Color(.systemBackground).opacity(0), Color(.systemBackground)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 40)
+
+                Color(.systemBackground)
+                    .frame(height: 70)
+            }
+            .allowsHitTesting(false) // Don't block button taps
+        }
         .overlay(alignment: .bottom) {
             // Floating action buttons
             HStack(spacing: 12) {
